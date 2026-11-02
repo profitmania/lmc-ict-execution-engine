@@ -83,7 +83,7 @@
                 <span class="text-lmc-muted">STATE:</span>
                 <span id="stateText" class="font-bold text-lmc-gold">AWAITING SWEEP</span>
             </div>
-            <button onclick="toggleCodeModal()" class="px-4 py-2 rounded-xl bg-lmc-accent hover:bg-blue-600 transition font-bold font-mono text-xs flex items-center gap-2 text-white shadow-md">
+            <button onclick="openCodeModal()" class="px-4 py-2 rounded-xl bg-lmc-accent hover:bg-blue-600 transition font-bold font-mono text-xs flex items-center gap-2 text-white shadow-md cursor-pointer">
                 <i data-lucide="code"></i> Pine Script Code
             </button>
         </div>
@@ -277,17 +277,16 @@
                     <span class="px-2 py-0.5 rounded text-xs font-mono bg-lmc-green/20 text-lmc-green">Latest Code</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="copyPineCode()" id="copyBtn" class="px-3 py-1.5 rounded-lg bg-lmc-cyan text-black hover:bg-cyan-300 transition font-mono font-bold text-xs flex items-center gap-1.5">
+                    <button onclick="copyPineCode()" id="copyBtn" class="px-3.5 py-1.5 rounded-lg bg-lmc-cyan text-black hover:bg-cyan-300 transition font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer">
                         <i data-lucide="copy" class="w-3.5 h-3.5"></i> <span id="copyBtnText">Copy Code</span>
                     </button>
-                    <button onclick="toggleCodeModal()" class="text-lmc-muted hover:text-white p-1"><i data-lucide="x"></i></button>
+                    <button onclick="closeCodeModal()" class="text-lmc-muted hover:text-white p-1 cursor-pointer"><i data-lucide="x"></i></button>
                 </div>
             </div>
             
             <!-- Code Container -->
             <div class="flex-1 overflow-y-auto bg-black rounded-xl p-4 border border-lmc-border">
-                <pre id="pineScriptCodeText" class="font-mono text-xs text-lmc-cyan leading-relaxed select-all">
-//@version=6
+                <textarea id="pineScriptArea" readonly class="w-full h-96 bg-black text-lmc-cyan font-mono text-xs leading-relaxed border-none outline-none resize-none select-all">//@version=6
 indicator("LMC ICT Engine v2.0.5 [Risk-In-Label]", shorttitle = "LMC ICT v2.0.5", overlay = true, max_boxes_count = 300, max_lines_count = 300, max_labels_count = 150, max_bars_back = 5000)
 
 // © Live Market Coach
@@ -720,3 +719,115 @@ if barstate.islast
         f_setSnapshotRow(dataPanel, 6, "Target R-Ratio", str.tostring(exTargetR, "0.0") + " R", LMC_GREEN, snapTextSize)
     else
         table.clear(dataPanel, 0, 0, 1, 6)
+</textarea>
+            </div>
+            <div class="mt-4 flex justify-between items-center">
+                <span class="text-xs font-mono text-lmc-muted">Compatible with TradingView Pine Script v6</span>
+                <button onclick="closeCodeModal()" class="px-4 py-2 rounded-xl bg-lmc-accent text-white font-mono font-bold text-xs cursor-pointer">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let state = {
+            sweep: 'none',
+            displacement: true,
+            hudPos: 'bottom-left'
+        };
+
+        function setSweep(type) {
+            state.sweep = type;
+            updateSim();
+        }
+
+        function setDisplacement(val) {
+            state.displacement = val;
+            updateSim();
+        }
+
+        function updateHUDPos() {
+            state.hudPos = document.getElementById('hudPosSelect').value;
+            updateSim();
+        }
+
+        function updateSim() {
+            const candle = document.getElementById('simCandle');
+            const hudHeader = document.getElementById('hudHeader');
+            const hudTitle = document.getElementById('hudHeaderTitle');
+            const hudBody = document.getElementById('hudBody');
+            const snapSweep = document.getElementById('snapSweep');
+            const snapStatus = document.getElementById('snapStatus');
+            const stateText = document.getElementById('stateText');
+
+            // Displacement visual
+            if (state.displacement) {
+                candle.className = "w-7 h-28 bg-lmc-yellow rounded-sm transition-all duration-300 glow-yellow shadow-lg";
+            } else {
+                candle.className = "w-4 h-12 bg-lmc-green rounded-sm transition-all duration-300 shadow-md";
+            }
+
+            // Sweep & Arming Logic
+            if (state.sweep === 'ssl') {
+                hudHeader.className = "bg-lmc-green text-black font-extrabold px-3 py-1.5 text-xs";
+                hudTitle.innerText = "🟢 SSL SWEPT — ARMED FOR BULLISH DISPLACEMENT";
+                hudBody.innerText = "Low liquidity cleared below. Awaiting Yellow Displacement Candle + Engulfing to BUY.";
+                snapSweep.innerText = "SSL ARMED (BUY)";
+                snapSweep.className = "text-lmc-green font-bold";
+                snapStatus.innerText = "ARMED";
+                snapStatus.className = "text-lmc-green font-bold";
+                stateText.innerText = "SSL ARMED";
+                stateText.className = "font-bold text-lmc-green";
+            } else if (state.sweep === 'bsl') {
+                hudHeader.className = "bg-lmc-red text-white font-extrabold px-3 py-1.5 text-xs";
+                hudTitle.innerText = "🔴 BSL SWEPT — ARMED FOR BEARISH DISPLACEMENT";
+                hudBody.innerText = "High liquidity cleared above. Awaiting Yellow Displacement Candle + Engulfing to SELL.";
+                snapSweep.innerText = "BSL ARMED (SELL)";
+                snapSweep.className = "text-lmc-red font-bold";
+                snapStatus.innerText = "ARMED";
+                snapStatus.className = "text-lmc-red font-bold";
+                stateText.innerText = "BSL ARMED";
+                stateText.className = "font-bold text-lmc-red";
+            } else {
+                hudHeader.className = "bg-lmc-accent text-black font-extrabold px-3 py-1.5 text-xs";
+                hudTitle.innerText = "⚡ LMC AI COACH — MONITORING SWEEPS";
+                hudBody.innerText = "Tracking dotted SSL/BSL lines. Waiting for sweep before arming entry.";
+                snapSweep.innerText = "WAITING";
+                snapSweep.className = "text-lmc-gold font-bold";
+                snapStatus.innerText = "IDLE";
+                snapStatus.className = "text-lmc-muted";
+                stateText.innerText = "AWAITING SWEEP";
+                stateText.className = "font-bold text-lmc-gold";
+            }
+        }
+
+        function resetSim() {
+            state.sweep = 'none';
+            state.displacement = true;
+            document.getElementById('hudPosSelect').value = 'bottom-left';
+            updateSim();
+        }
+
+        function openCodeModal() {
+            document.getElementById('codeModal').classList.remove('hidden');
+        }
+
+        function closeCodeModal() {
+            document.getElementById('codeModal').classList.add('hidden');
+        }
+
+        function copyPineCode() {
+            const area = document.getElementById('pineScriptArea');
+            area.select();
+            document.execCommand('copy');
+            
+            const btnText = document.getElementById('copyBtnText');
+            btnText.innerText = 'Copied!';
+            setTimeout(() => {
+                btnText.innerText = 'Copy Code';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
